@@ -8,7 +8,7 @@ set -e
 # Configuration
 APP_NAME="Posturr"
 BUNDLE_ID="com.posturr.posturr"
-VERSION="1.0.1"
+VERSION="1.0.2"
 MIN_MACOS="13.0"
 
 # Directories
