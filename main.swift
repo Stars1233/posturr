@@ -836,10 +836,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         pauseOnTheGoMenuItem.state = pauseOnTheGo ? .on : .off
         saveSettings()
 
-        // If we just enabled it and we're on laptop only, pause immediately
-        if pauseOnTheGo && isLaptopOnlyConfiguration() && state == .monitoring {
-            state = .paused(.onTheGo)
-        } else if !pauseOnTheGo && state == .paused(.onTheGo) {
+        // Don't immediately pause when enabling - only pause on transition to laptop-only
+        // But if we disabled it and we were paused for on-the-go, resume
+        if !pauseOnTheGo && state == .paused(.onTheGo) {
             // If we disabled it and we were paused for on-the-go, resume
             state = .monitoring
         }
