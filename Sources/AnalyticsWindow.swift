@@ -102,15 +102,24 @@ struct AnalyticsView: View {
                     let history = manager.getLast7Days()
                     
                     Chart(history) { day in
-                        BarMark(
-                            x: .value("Date", day.date, unit: .day),
-                            y: .value("Score", day.postureScore)
-                        )
-                        .foregroundStyle(scoreColor(day.postureScore))
-                        .annotation(position: .top) {
-                            Text(String(format: "%.0f", day.postureScore))
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
+                        if day.totalSeconds > 0 {
+                            BarMark(
+                                x: .value("Date", day.date, unit: .day),
+                                y: .value("Score", day.postureScore)
+                            )
+                            .foregroundStyle(scoreColor(day.postureScore))
+                            .annotation(position: .top) {
+                                Text(String(format: "%.0f", day.postureScore))
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        } else {
+                            // Invisible bar to maintain x-axis spacing
+                            BarMark(
+                                x: .value("Date", day.date, unit: .day),
+                                y: .value("Score", 0)
+                            )
+                            .opacity(0)
                         }
                     }
                     .chartYScale(domain: 0...100)

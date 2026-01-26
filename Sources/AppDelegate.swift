@@ -293,6 +293,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         let statsItem = NSMenuItem(title: "Statistics...", action: #selector(showAnalytics), keyEquivalent: "s")
         statsItem.target = self
+        statsItem.image = NSImage(systemSymbolName: "chart.bar.xaxis", accessibilityDescription: "Statistics")
         menu.addItem(statsItem)
 
         let settingsItem = NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ",")
