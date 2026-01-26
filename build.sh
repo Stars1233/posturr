@@ -55,6 +55,8 @@ mkdir -p "$RESOURCES_DIR"
 
 # Compile Swift code
 echo "Compiling main.swift..."
+echo "Building universal binary (arm64 + x86_64)..."
+
 swiftc \
     -O \
     -whole-module-optimization \
@@ -65,33 +67,29 @@ swiftc \
     -framework AVFoundation \
     -framework Vision \
     -framework CoreImage \
-    -o "$MACOS_DIR/$APP_NAME" \
+    -o "$MACOS_DIR/${APP_NAME}_arm64" \
     "$SCRIPT_DIR/main.swift"
 
-# Also compile for x86_64 and create universal binary (if on Apple Silicon)
-if [[ $(uname -m) == "arm64" ]]; then
-    echo "Creating universal binary (arm64 + x86_64)..."
-    swiftc \
-        -O \
-        -whole-module-optimization \
-        $SWIFT_FLAGS \
-        -target x86_64-apple-macos$MIN_MACOS \
-        -sdk $(xcrun --show-sdk-path) \
-        -framework AppKit \
-        -framework AVFoundation \
-        -framework Vision \
-        -framework CoreImage \
-        -o "$MACOS_DIR/${APP_NAME}_x86" \
-        "$SCRIPT_DIR/main.swift"
+swiftc \
+    -O \
+    -whole-module-optimization \
+    $SWIFT_FLAGS \
+    -target x86_64-apple-macos$MIN_MACOS \
+    -sdk $(xcrun --show-sdk-path) \
+    -framework AppKit \
+    -framework AVFoundation \
+    -framework Vision \
+    -framework CoreImage \
+    -o "$MACOS_DIR/${APP_NAME}_x86" \
+    "$SCRIPT_DIR/main.swift"
 
-    # Create universal binary
-    lipo -create -output "$MACOS_DIR/$APP_NAME" \
-        "$MACOS_DIR/$APP_NAME" \
-        "$MACOS_DIR/${APP_NAME}_x86"
+# Create universal binary
+lipo -create -output "$MACOS_DIR/$APP_NAME" \
+    "$MACOS_DIR/${APP_NAME}_arm64" \
+    "$MACOS_DIR/${APP_NAME}_x86"
 
-    # Clean up
-    rm "$MACOS_DIR/${APP_NAME}_x86"
-fi
+# Clean up
+rm "$MACOS_DIR/${APP_NAME}_arm64" "$MACOS_DIR/${APP_NAME}_x86"
 
 # Create Info.plist
 echo "Creating Info.plist..."
