@@ -153,7 +153,7 @@ enum PauseReason: Equatable {
 **Scenario 13: Enable "Pause on the Go" while on laptop-only**
 - User is on laptop with just built-in display
 - User enables "Pause on the Go" setting
-- Expected: Immediately pauses with "Paused (on the go)"
+- Expected: No immediate change - continues monitoring. Pause only triggers when transitioning TO laptop-only (unplugging monitors), not when already there.
 
 **Scenario 14: Unplug monitor with "Pause on the Go" enabled**
 - User has "Pause on the Go" enabled
