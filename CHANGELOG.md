@@ -5,6 +5,14 @@ All notable changes to Posturr will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-01-26
+
+### Changed
+- Blur now starts at zero intensity at deadzone boundary for smoother entry
+- Near-instant overlay fade-out when returning to good posture
+- Widened deadzone range (0% to 40%) for more noticeable impact between settings
+- Shifted intensity values gentler overall with wider spread
+
 ## [1.2.0] - 2026-01-26
 
 ### Added
