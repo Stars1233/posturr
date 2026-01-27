@@ -195,6 +195,10 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 - Uses private CoreGraphics API for blur, with NSVisualEffectView fallback
 - Inspired by the need for better posture during long coding sessions
 
+## Linux version
+
+Want this on Linux? See [postured](https://github.com/vadi2/postured).
+
 ### Contributors
 
 - [@wklm](https://github.com/wklm) - Compatibility mode implementation
