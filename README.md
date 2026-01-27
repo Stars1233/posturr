@@ -4,6 +4,7 @@
 
 Posturr uses your Mac's camera and Apple's Vision framework to monitor your posture in real-time. When it detects that you're slouching, it progressively blurs your screen to remind you to sit up straight. Maintain good posture, and the blur clears instantly.
 
+[![Download Latest Release](https://img.shields.io/github/v/release/tldev/posturr?style=for-the-badge&logo=apple&label=Download&color=007AFF)](https://github.com/tldev/posturr/releases/latest)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/8VzX39fZ)
 
 **Join our Discord** to share feedback, get help, suggest features, and connect with other Posturr users!
