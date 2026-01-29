@@ -329,10 +329,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func toggleEnabled() {
         if state == .disabled {
+            // Note: We intentionally don't check pauseOnTheGo here.
+            // "Pause on the go" should only trigger when display config *changes*
+            // to laptop-only (e.g., unplugging external monitor), not when the
+            // user explicitly enables the app via menu or keyboard shortcut.
             if !isCalibrated {
                 state = .paused(.noProfile)
-            } else if pauseOnTheGo && isLaptopOnlyConfiguration() {
-                state = .paused(.onTheGo)
             } else if !isCameraAvailable() {
                 state = .paused(.cameraDisconnected)
             } else {
