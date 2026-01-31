@@ -87,8 +87,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var analyticsWindowController: AnalyticsWindowController?
 
     // Tracking Source (Camera or AirPods)
-    var trackingSource: TrackingSource = .camera
+    var trackingSource: TrackingSource = .camera {
+        didSet {
+            print("[Mode] Tracking Source Changed: \(oldValue) -> \(trackingSource)")
+            syncCameraToState()
+            syncAirPodsToState()
+            
+            DispatchQueue.main.async { [weak self] in
+                 self?.updateTrackingMenu()
+            }
+        }
+    }
     var headphoneMotionManager = HeadphoneMotionManager()
+    var airPodsProfile: AirPodsProfile?
 
     // Display management
     var displayDebounceTimer: Timer?
@@ -160,6 +171,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func handleStateTransition(from oldState: AppState, to newState: AppState) {
         print("[State] Transition: \(oldState) -> \(newState)")
         syncCameraToState()
+        syncAirPodsToState()
         if !newState.isActive {
             targetBlurRadius = 0
             postureWarningIntensity = 0  // Clear any active posture warning
@@ -167,11 +179,35 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         syncUIToState()
     }
 
+    private func syncAirPodsToState() {
+        let shouldRun: Bool
+        switch state {
+        case .calibrating, .monitoring:
+            shouldRun = (trackingSource == .airpods)
+        case .disabled, .paused:
+            shouldRun = false
+        }
+        
+        if shouldRun {
+            if !headphoneMotionManager.isActive {
+                print("[State] Starting AirPods Tracking")
+                headphoneMotionManager.startTracking {
+                    // Permission granted / Data started
+                }
+            }
+        } else {
+            if headphoneMotionManager.isActive {
+                print("[State] Stopping AirPods Tracking")
+                headphoneMotionManager.stopTracking()
+            }
+        }
+    }
+
     private func syncCameraToState() {
         let shouldRun: Bool
         switch state {
         case .calibrating, .monitoring:
-            shouldRun = true
+            shouldRun = (trackingSource == .camera)
         case .disabled, .paused:
             shouldRun = false
         }
@@ -406,14 +442,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     @objc func setTrackingToCamera() {
         trackingSource = .camera
-        updateTrackingMenu()
         saveSettings()
         // TODO: Step 2-4에서 카메라 모드 전환 로직 구현
     }
     
     @objc func setTrackingToAirPods() {
         trackingSource = .airpods
-        updateTrackingMenu()
         saveSettings()
         
         print("[Tracking] Switching to AirPods. Requesting data/permission...")
@@ -421,10 +455,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async {
                 print("[Tracking] AirPods data started. Proceeding to calibration if needed.")
                 // TODO: Step 3에서 캘리브레이션 로직 연결
-                // self?.startCalibration()
-                
-                // 임시: 상태를 모니터링으로 변경 테스트
-                self?.state = .monitoring
+                print("[Tracking] AirPods connected. Starting calibration...")
+                self?.startCalibration()
             }
         }
     }
@@ -910,59 +942,77 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         isCalibrated = false
         state = .calibrating
 
-        calibrationController = CalibrationWindowController()
-        calibrationController?.start(
+
+        
+        let calibrations = CalibrationWindowController()
+        calibrationController = calibrations
+        
+        calibrations.start(
+            trackingSource: trackingSource,
             onComplete: { [weak self] values in
-                self?.finishCalibration(values: values)
+                guard let self = self else { return }
+                
+                if self.trackingSource == .airpods {
+                    // AirPods Calibration Complete
+                    // Capture current head pose as baseline
+                    if #available(macOS 14.0, *) {
+                        let manager = self.headphoneMotionManager
+                        let profile = AirPodsProfile(
+                            pitch: manager.currentPitch,
+                            roll: manager.currentRoll,
+                            yaw: manager.currentYaw
+                        )
+                        self.airPodsProfile = profile
+                        self.saveSettings() // Save profile immediately
+                        print("[Calibration] AirPods profile saved: \(profile)")
+                    }
+                    
+                    self.isCalibrated = true
+                    self.calibrationController = nil
+                    
+                    print("[Calibration] AirPods calibration complete, transitioning to monitoring")
+                    self.state = .monitoring
+                } else {
+                    // Camera Calibration Complete (Original Logic)
+                    print("[Calibration] Finishing with \(values.count) values")
+
+                    let maxY = values.max() ?? 0.6
+                    let minY = values.min() ?? 0.4
+                    let avgY = values.reduce(0, +) / CGFloat(values.count)
+
+                    self.goodPostureY = maxY
+                    self.badPostureY = minY
+                    self.neutralY = avgY
+                    self.postureRange = abs(maxY - minY)
+
+                    let profile = ProfileData(
+                        goodPostureY: self.goodPostureY,
+                        badPostureY: self.badPostureY,
+                        neutralY: self.neutralY,
+                        postureRange: self.postureRange,
+                        cameraID: self.selectedCameraID ?? ""
+                    )
+                    let configKey = self.getCurrentConfigKey()
+                    print("[Calibration] Saving profile for config: \(configKey), camera: \(self.selectedCameraID ?? "nil")")
+                    self.saveProfile(forKey: configKey, data: profile)
+
+                    self.isCalibrated = true
+                    self.calibrationController = nil
+
+                    self.consecutiveBadFrames = 0
+                    self.consecutiveGoodFrames = 0
+
+                    print("[Calibration] Complete, transitioning to monitoring")
+                    self.state = .monitoring
+                }
             },
             onCancel: { [weak self] in
-                self?.cancelCalibration()
+                print("[Calibration] Cancelled")
+                self?.calibrationController = nil
+                self?.isCalibrated = true
+                self?.state = .monitoring
             }
         )
-    }
-
-    func finishCalibration(values: [CGFloat]) {
-        guard values.count >= 4 else {
-            cancelCalibration()
-            return
-        }
-
-        print("[Calibration] Finishing with \(values.count) values")
-
-        let maxY = values.max() ?? 0.6
-        let minY = values.min() ?? 0.4
-        let avgY = values.reduce(0, +) / CGFloat(values.count)
-
-        goodPostureY = maxY
-        badPostureY = minY
-        neutralY = avgY
-        postureRange = abs(maxY - minY)
-
-        let profile = ProfileData(
-            goodPostureY: goodPostureY,
-            badPostureY: badPostureY,
-            neutralY: neutralY,
-            postureRange: postureRange,
-            cameraID: selectedCameraID ?? ""
-        )
-        let configKey = getCurrentConfigKey()
-        print("[Calibration] Saving profile for config: \(configKey), camera: \(selectedCameraID ?? "nil")")
-        saveProfile(forKey: configKey, data: profile)
-
-        isCalibrated = true
-        calibrationController = nil
-
-        consecutiveBadFrames = 0
-        consecutiveGoodFrames = 0
-
-        print("[Calibration] Complete, transitioning to monitoring")
-        state = .monitoring
-    }
-
-    func cancelCalibration() {
-        calibrationController = nil
-        isCalibrated = true
-        state = .monitoring
     }
 
     func applyProfile(_ profile: ProfileData) {
@@ -996,6 +1046,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             defaults.set(cameraID, forKey: SettingsKeys.lastCameraID)
         }
         defaults.set(trackingSource.rawValue, forKey: SettingsKeys.trackingSource)
+        if let airPodsProfile = airPodsProfile,
+           let profileData = try? JSONEncoder().encode(airPodsProfile) {
+            defaults.set(profileData, forKey: SettingsKeys.airPodsProfile)
+        }
     }
 
     func loadSettings() {
@@ -1019,6 +1073,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let sourceString = defaults.string(forKey: SettingsKeys.trackingSource),
            let source = TrackingSource(rawValue: sourceString) {
             trackingSource = source
+        }
+        if let profileData = defaults.data(forKey: SettingsKeys.airPodsProfile),
+           let profile = try? JSONDecoder().decode(AirPodsProfile.self, from: profileData) {
+            airPodsProfile = profile
         }
         if let modeString = defaults.string(forKey: SettingsKeys.warningMode),
            let mode = WarningMode(rawValue: modeString) {

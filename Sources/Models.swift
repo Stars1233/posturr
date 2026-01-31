@@ -69,6 +69,7 @@ enum SettingsKeys {
     static let toggleShortcutModifiers = "toggleShortcutModifiers"
     static let detectionMode = "detectionMode"
     static let trackingSource = "trackingSource"
+    static let airPodsProfile = "airPodsProfile"
 }
 
 // MARK: - Keyboard Shortcut
@@ -118,6 +119,12 @@ struct ProfileData: Codable {
     let neutralY: CGFloat
     let postureRange: CGFloat
     let cameraID: String
+}
+
+struct AirPodsProfile: Codable {
+    let pitch: Double
+    let roll: Double
+    let yaw: Double
 }
 
 // MARK: - Pause Reason

@@ -110,6 +110,7 @@ class CalibrationWindowController: NSObject {
     var currentNoseY: CGFloat = 0.5
     var localEventMonitor: Any?
     var globalEventMonitor: Any?
+    var trackingSource: TrackingSource = .camera
 
     struct CalibrationStep {
         let instruction: String
@@ -147,8 +148,19 @@ class CalibrationWindowController: NSObject {
 
     func buildSteps() {
         steps = []
-        let corners: [Corner] = [.topLeft, .topRight, .bottomRight, .bottomLeft]
+        
+        if trackingSource == .airpods {
+            // AirPods mode: Simple 1-step calibration
+            steps.append(CalibrationStep(
+                instruction: "Sit straight looking forward",
+                screenIndex: 0,
+                corner: .topLeft // Ignored for AirPods mode ring
+            ))
+            return
+        }
 
+        // Camera mode: 4-corner calibration
+        let corners: [Corner] = [.topLeft, .topRight, .bottomRight, .bottomLeft]
         for screenIndex in 0..<NSScreen.screens.count {
             let screenName = NSScreen.screens.count > 1 ? "Screen \(screenIndex + 1) " : ""
             for corner in corners {
@@ -161,7 +173,8 @@ class CalibrationWindowController: NSObject {
         }
     }
 
-    func start(onComplete: @escaping ([CGFloat]) -> Void, onCancel: @escaping () -> Void) {
+    func start(trackingSource: TrackingSource, onComplete: @escaping ([CGFloat]) -> Void, onCancel: @escaping () -> Void) {
+        self.trackingSource = trackingSource
         self.onComplete = onComplete
         self.onCancel = onCancel
         self.currentStep = 0
@@ -232,7 +245,8 @@ class CalibrationWindowController: NSObject {
         // Update all views
         for (index, view) in calibrationViews.enumerated() {
             if index == step.screenIndex {
-                view.showRing = true
+                // Show ring only for Camera mode
+                view.showRing = (trackingSource == .camera)
                 view.targetPosition = step.corner.position(in: view.bounds)
                 view.instructionText = step.instruction
                 view.stepText = "Step \(currentStep + 1) of \(steps.count)"
@@ -255,7 +269,13 @@ class CalibrationWindowController: NSObject {
     }
 
     func captureCurrentPosition() {
-        capturedValues.append(currentNoseY)
+        if trackingSource == .camera {
+            capturedValues.append(currentNoseY)
+        } else {
+            // For AirPods, we don't use eye coordinates, but we proceed the step.
+            // The actual values will be captured in AppDelegate using HeadphoneMotionManager
+            capturedValues.append(0.0) // Dummy value
+        }
         currentStep += 1
         updateStep()
     }
