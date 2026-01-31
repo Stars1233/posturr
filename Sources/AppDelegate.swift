@@ -86,6 +86,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var settingsWindowController = SettingsWindowController()
     var analyticsWindowController: AnalyticsWindowController?
 
+    // Tracking Source (Camera or AirPods)
+    var trackingSource: TrackingSource = .camera
+
     // Display management
     var displayDebounceTimer: Timer?
 
@@ -309,6 +312,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         recalibrateMenuItem.target = self
         menu.addItem(recalibrateMenuItem)
 
+        // Tracking Mode submenu
+        let trackingMenu = NSMenu()
+        let trackingItem = NSMenuItem(title: "Tracking Mode", action: nil, keyEquivalent: "")
+        trackingItem.submenu = trackingMenu
+        menu.addItem(trackingItem)
+        
+        let cameraItem = NSMenuItem(title: "Camera", action: #selector(setTrackingToCamera), keyEquivalent: "")
+        cameraItem.target = self
+        trackingMenu.addItem(cameraItem)
+        
+        let airpodsItem = NSMenuItem(title: "AirPods", action: #selector(setTrackingToAirPods), keyEquivalent: "")
+        airpodsItem.target = self
+        trackingMenu.addItem(airpodsItem)
+
         menu.addItem(NSMenuItem.separator())
         
         let statsItem = NSMenuItem(title: "Statistics", action: #selector(showAnalytics), keyEquivalent: "s")
@@ -327,6 +344,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(quitItem)
 
         statusItem.menu = menu
+        
+        // Initialize checkmarks
+        updateTrackingMenu()
+    }
+    
+    // Update Tracking Mode menu checkmarks
+    func updateTrackingMenu() {
+        guard let menu = statusItem.menu,
+              let trackingItem = menu.items.first(where: { $0.title == "Tracking Mode" }),
+              let submenu = trackingItem.submenu else { return }
+              
+        if let cameraItem = submenu.items.first(where: { $0.title == "Camera" }) {
+            cameraItem.state = (trackingSource == .camera) ? .on : .off
+        }
+        
+        if let airpodsItem = submenu.items.first(where: { $0.title == "AirPods" }) {
+            airpodsItem.state = (trackingSource == .airpods) ? .on : .off
+        }
     }
 
     // MARK: - Menu Actions
@@ -366,6 +401,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func openSettings() {
         settingsWindowController.showSettings(appDelegate: self, fromStatusItem: statusItem)
+    }
+    
+    @objc func setTrackingToCamera() {
+        trackingSource = .camera
+        updateTrackingMenu()
+        saveSettings()
+        // TODO: Step 2-4에서 카메라 모드 전환 로직 구현
+    }
+    
+    @objc func setTrackingToAirPods() {
+        trackingSource = .airpods
+        updateTrackingMenu()
+        saveSettings()
+        // TODO: Step 2에서 피트니스 권한 요청 후 캘리브레이션 진행
     }
 
     @objc func quit() {
@@ -934,6 +983,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let cameraID = selectedCameraID {
             defaults.set(cameraID, forKey: SettingsKeys.lastCameraID)
         }
+        defaults.set(trackingSource.rawValue, forKey: SettingsKeys.trackingSource)
     }
 
     func loadSettings() {
@@ -954,6 +1004,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             detectionMode = mode
         }
         selectedCameraID = defaults.string(forKey: SettingsKeys.lastCameraID)
+        if let sourceString = defaults.string(forKey: SettingsKeys.trackingSource),
+           let source = TrackingSource(rawValue: sourceString) {
+            trackingSource = source
+        }
         if let modeString = defaults.string(forKey: SettingsKeys.warningMode),
            let mode = WarningMode(rawValue: modeString) {
             warningMode = mode

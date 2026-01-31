@@ -68,6 +68,7 @@ enum SettingsKeys {
     static let toggleShortcutKeyCode = "toggleShortcutKeyCode"
     static let toggleShortcutModifiers = "toggleShortcutModifiers"
     static let detectionMode = "detectionMode"
+    static let trackingSource = "trackingSource"
 }
 
 // MARK: - Keyboard Shortcut
@@ -138,6 +139,19 @@ enum AppState: Equatable {
         switch self {
         case .monitoring, .calibrating: return true
         case .disabled, .paused: return false
+        }
+    }
+}
+
+// MARK: - Tracking Source
+enum TrackingSource: String, Codable, CaseIterable {
+    case camera = "Camera"
+    case airpods = "AirPods"
+    
+    var displayName: String {
+        switch self {
+        case .camera: return "Camera"
+        case .airpods: return "AirPods"
         }
     }
 }
