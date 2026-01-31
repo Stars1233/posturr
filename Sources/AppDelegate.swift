@@ -1232,19 +1232,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func evaluateAirPodsPosture(pitch: Double, profile: AirPodsProfile) {
-        // Simple absolute difference threshold
-        let diff = abs(pitch - profile.pitch)
+        // Calculate signed difference (Current - Neutral)
+        // Assumption: Looking Down decreases Pitch (Negative direction) based on reference logic
+        let diff = pitch - profile.pitch
         
         // Threshold calculation: Base 0.15 rad (~8.5 deg) + scaled deadZone
         // deadZone (0.0-1.0) * 0.5 rad (~28 deg)
         let threshold = 0.15 + (deadZone * 0.5)
         
-        let isBadPosture = diff > threshold
+        // Only detect forward lean (negative diff exceeding threshold)
+        // Leaning back (positive diff) is ignored (e.g. stretching)
+        let isBadPosture = diff < -threshold
         
         // Severity
         var severity: Double = 0
         if isBadPosture {
-             let excess = diff - threshold
+             // How much past the threshold?
+             // e.g. diff = -0.4, threshold = 0.15 => excess = |-0.4| - 0.15 = 0.25
+             let excess = abs(diff) - threshold
              // Max out severity at +0.3 rad (~17 deg) past threshold
              severity = min(1.0, excess / 0.3)
         }
