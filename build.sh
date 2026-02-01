@@ -13,7 +13,7 @@ set -e
 # Configuration
 APP_NAME="Posturr"
 BUNDLE_ID="com.thelazydeveloper.posturr"
-VERSION="1.5.2"
+VERSION="1.5.3"
 MIN_MACOS="13.0"
 
 # Check for App Store build flag
