@@ -7,7 +7,7 @@ Posturr monitors your posture in real-time using either your Mac's camera or Air
 [![Download on the App Store](https://toolbox.marketingtools.apple.com/api/v2/badges/download-on-the-app-store/black/en-us?releaseDate=1769990400)](https://apps.apple.com/us/app/posturr-posture-monitor/id6758276540?mt=12)
 
 [![Download Latest Release](https://img.shields.io/github/v/release/tldev/posturr?style=for-the-badge&logo=apple&label=Download&color=007AFF)](https://github.com/tldev/posturr/releases/latest)
-[![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/8VzX39fZ)
+[![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/6Ufy2SnXDW)
 
 **Join our Discord** to share feedback, get help, suggest features, and connect with other Posturr users!
 

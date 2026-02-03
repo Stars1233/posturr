@@ -393,7 +393,7 @@ struct SettingsView: View {
                         }
                         .help("View on GitHub")
 
-                        Link(destination: URL(string: "https://discord.gg/posturr")!) {
+                        Link(destination: URL(string: "https://discord.gg/6Ufy2SnXDW")!) {
                             DiscordIcon(color: Color.secondary.opacity(0.7))
                                 .frame(width: 16, height: 16)
                                 .padding(4)
