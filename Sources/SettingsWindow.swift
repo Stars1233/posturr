@@ -37,7 +37,7 @@ class SettingsWindowController: NSObject, NSWindowDelegate {
         let hostingController = NSHostingController(rootView: settingsView)
 
         // Calculate actual content size from SwiftUI view
-        let fittingSize = hostingController.sizeThatFits(in: CGSize(width: 640, height: CGFloat.greatestFiniteMagnitude))
+        let fittingSize = hostingController.sizeThatFits(in: CGSize(width: 480, height: CGFloat.greatestFiniteMagnitude))
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: fittingSize.width, height: fittingSize.height),
@@ -85,69 +85,136 @@ class SettingsWindowController: NSObject, NSWindowDelegate {
     }
 }
 
-// MARK: - Section Card
+// MARK: - Compact Slider
 
-struct SectionCard<Content: View>: View {
+struct CompactSlider: View {
     let title: String
-    let icon: String
-    let content: Content
-
-    init(_ title: String, icon: String, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.icon = icon
-        self.content = content()
-    }
+    let helpText: String
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    let step: Double
+    let valueLabel: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.brandCyan)
+        HStack(spacing: 8) {
+            HStack(spacing: 3) {
                 Text(title)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.primary)
+                    .font(.system(size: 11))
+                    .frame(width: 62, alignment: .leading)
+                HelpButton(text: helpText)
             }
 
-            content
+            Slider(value: $value, in: range, step: step)
+                .tint(.brandCyan)
+                .frame(maxWidth: .infinity)
+
+            Text(valueLabel)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(.brandCyan)
+                .frame(width: 70, alignment: .trailing)
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color(NSColor.controlBackgroundColor))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
-        )
+        .frame(height: 22)
     }
 }
 
-// MARK: - Setting Row
+// MARK: - Compact Toggle
 
-struct SettingRow: View {
+struct CompactToggle: View {
     let title: String
     let helpText: String
     @Binding var isOn: Bool
 
     var body: some View {
-        HStack {
-            Text(title)
-                .font(.system(size: 12))
-
-            HelpButton(text: helpText)
-
-            Spacer()
-
+        HStack(spacing: 6) {
             Toggle("", isOn: $isOn)
                 .toggleStyle(.switch)
                 .tint(.brandCyan)
+                .labelsHidden()
+                .scaleEffect(0.65)
+                .frame(width: 32)
+
+            Text(title)
+                .font(.system(size: 11))
+                .lineLimit(1)
+
+            HelpButton(text: helpText)
+
+            Spacer(minLength: 0)
         }
+        .frame(height: 22)
         .contentShape(Rectangle())
-        .onTapGesture {
-            isOn.toggle()
+        .onTapGesture { isOn.toggle() }
+    }
+}
+
+// MARK: - Compact Warning Style Picker
+
+struct CompactWarningStylePicker: View {
+    @Binding var selection: WarningMode
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach([WarningMode.blur, .vignette, .border, .solid, .none], id: \.self) { mode in
+                Button(action: { selection = mode }) {
+                    Text(mode.shortName)
+                        .font(.system(size: 10, weight: selection == mode ? .semibold : .regular))
+                        .foregroundColor(selection == mode ? .white : .primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 5)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(selection == mode ? Color.brandCyan : Color.clear)
+                        )
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
         }
+        .padding(2)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Color.primary.opacity(0.06))
+        )
+    }
+}
+
+// MARK: - Compact Tracking Source Picker
+
+struct CompactTrackingSourcePicker: View {
+    @Binding var selection: TrackingSource
+    let airPodsAvailable: Bool
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(TrackingSource.allCases) { source in
+                let isDisabled = source == .airpods && !airPodsAvailable
+                Button(action: {
+                    if !isDisabled { selection = source }
+                }) {
+                    HStack(spacing: 3) {
+                        Image(systemName: source.icon)
+                            .font(.system(size: 9))
+                        Text(source.displayName)
+                            .font(.system(size: 10, weight: selection == source ? .semibold : .regular))
+                    }
+                    .foregroundColor(selection == source ? .white : (isDisabled ? .secondary.opacity(0.5) : .primary))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 5)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(selection == source ? Color.brandCyan : Color.clear)
+                    )
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(isDisabled)
+            }
+        }
+        .padding(2)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Color.primary.opacity(0.06))
+        )
     }
 }
 
@@ -161,88 +228,6 @@ struct SubtleDivider: View {
     }
 }
 
-// MARK: - Labeled Slider
-
-struct LabeledSlider: View {
-    let title: String
-    let helpText: String
-    @Binding var value: Double
-    let range: ClosedRange<Double>
-    let step: Double
-    let leftLabel: String
-    let rightLabel: String
-    let valueLabel: String
-    @State private var showingHelp = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 4) {
-                Text(title)
-                    .font(.system(size: 12))
-
-                HelpButton(text: helpText)
-
-                Spacer()
-
-                Text(valueLabel)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.brandCyan)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(
-                        Capsule()
-                            .fill(Color.brandCyan.opacity(0.12))
-                    )
-            }
-
-            Slider(value: $value, in: range, step: step)
-                .tint(.brandCyan)
-
-            HStack {
-                Text(leftLabel)
-                    .font(.system(size: 9))
-                    .foregroundColor(.secondary.opacity(0.7))
-                Spacer()
-                Text(rightLabel)
-                    .font(.system(size: 9))
-                    .foregroundColor(.secondary.opacity(0.7))
-            }
-        }
-    }
-}
-
-// MARK: - Warning Style Picker
-
-struct WarningStylePicker: View {
-    @Binding var selection: WarningMode
-
-    var body: some View {
-        HStack(spacing: 0) {
-            ForEach([WarningMode.blur, .vignette, .border, .solid, .none], id: \.self) { mode in
-                Button(action: { selection = mode }) {
-                    Text(mode.displayName)
-                        .font(.system(size: 11, weight: selection == mode ? .semibold : .regular))
-                        .foregroundColor(selection == mode ? .white : .primary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 7)
-                        .padding(.horizontal, 2)
-                        .background(
-                            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                .fill(selection == mode ? Color.brandCyan : Color.clear)
-                        )
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(2)
-        .background(
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .fill(Color.primary.opacity(0.06))
-        )
-    }
-}
-
 extension WarningMode {
     var displayName: String {
         switch self {
@@ -253,48 +238,15 @@ extension WarningMode {
         case .none: return "None"
         }
     }
-}
 
-// MARK: - Tracking Source Picker
-
-struct TrackingSourcePicker: View {
-    @Binding var selection: TrackingSource
-    let airPodsAvailable: Bool
-
-    var body: some View {
-        HStack(spacing: 0) {
-            ForEach(TrackingSource.allCases) { source in
-                let isDisabled = source == .airpods && !airPodsAvailable
-                Button(action: {
-                    if !isDisabled {
-                        selection = source
-                    }
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: source.icon)
-                            .font(.system(size: 10))
-                        Text(source.displayName)
-                            .font(.system(size: 11, weight: selection == source ? .semibold : .regular))
-                    }
-                    .foregroundColor(selection == source ? .white : (isDisabled ? .secondary.opacity(0.5) : .primary))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 7)
-                    .padding(.horizontal, 2)
-                    .background(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .fill(selection == source ? Color.brandCyan : Color.clear)
-                    )
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .disabled(isDisabled)
-            }
+    var shortName: String {
+        switch self {
+        case .blur: return "Blur"
+        case .vignette: return "Vignette"
+        case .border: return "Border"
+        case .solid: return "Solid"
+        case .none: return "None"
         }
-        .padding(2)
-        .background(
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .fill(Color.primary.opacity(0.06))
-        )
     }
 }
 
@@ -361,377 +313,334 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        VStack(spacing: 12) {
-                // Header
-                HStack(spacing: 10) {
-                    if let appIcon = NSImage(named: NSImage.applicationIconName) {
-                        Image(nsImage: appIcon)
-                            .resizable()
-                            .frame(width: 44, height: 44)
-                            .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 2)
-                    }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Posturr")
-                            .font(.system(size: 20, weight: .semibold))
-                        Text("Gentle posture reminders")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
-
-                    // Social links
-                    HStack(spacing: 6) {
-                        Link(destination: URL(string: "https://github.com/tldev/posturr")!) {
-                            GitHubIcon(color: Color.secondary.opacity(0.7))
-                                .frame(width: 16, height: 16)
-                                .padding(4)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .onHover { hovering in
-                            if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-                        }
-                        .help("View on GitHub")
-
-                        Link(destination: URL(string: "https://discord.gg/6Ufy2SnXDW")!) {
-                            DiscordIcon(color: Color.secondary.opacity(0.7))
-                                .frame(width: 16, height: 16)
-                                .padding(4)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .onHover { hovering in
-                            if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-                        }
-                        .help("Join Discord")
-                    }
-
-                    // Version badge
-                    if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
-                        Text("v\(version)")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(
-                                Capsule()
-                                    .fill(Color.primary.opacity(0.05))
-                            )
-                    }
+        VStack(spacing: 0) {
+            // Compact Header
+            HStack(spacing: 8) {
+                if let appIcon = NSImage(named: NSImage.applicationIconName) {
+                    Image(nsImage: appIcon)
+                        .resizable()
+                        .frame(width: 28, height: 28)
                 }
-                .padding(.bottom, 4)
+                Text("Posturr")
+                    .font(.system(size: 15, weight: .semibold))
 
-                // Two column layout
-                HStack(alignment: .top, spacing: 12) {
-                    // Left column - Detection
-                    VStack(spacing: 8) {
-                        SectionCard("Tracking", icon: "figure.stand") {
-                            VStack(alignment: .leading, spacing: 10) {
-                                // Tracking method picker
-                                VStack(alignment: .leading, spacing: 8) {
-                                    HStack(spacing: 4) {
-                                        Text("Method")
-                                            .font(.system(size: 12))
-                                        HelpButton(text: "Camera uses your webcam to track head position. AirPods uses motion sensors in compatible AirPods (Pro, Max, or 3rd gen) to detect head tilt.")
-                                    }
+                Spacer()
 
-                                    TrackingSourcePicker(
-                                        selection: $trackingSource,
-                                        airPodsAvailable: airPodsAvailable
-                                    )
-                                    .onChange(of: trackingSource) { newValue in
-                                        if newValue != appDelegate.trackingSource {
-                                            appDelegate.switchTrackingSource(to: newValue)
-                                        }
-                                    }
-                                }
-
-                                // Camera picker (always shown when camera mode to maintain consistent height)
-                                if trackingSource == .camera {
-                                    SubtleDivider()
-
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text("Camera")
-                                            .font(.system(size: 12))
-
-                                        if availableCameras.isEmpty {
-                                            Text("No cameras found")
-                                                .font(.system(size: 12))
-                                                .foregroundColor(.secondary)
-                                        } else {
-                                            Picker("", selection: $selectedCameraID) {
-                                                ForEach(availableCameras, id: \.id) { camera in
-                                                    Text(camera.name).tag(camera.id)
-                                                }
-                                            }
-                                            .labelsHidden()
-                                            .onChange(of: selectedCameraID) { newValue in
-                                                if newValue != appDelegate.selectedCameraID {
-                                                    appDelegate.selectedCameraID = newValue
-                                                    appDelegate.saveSettings()
-                                                    appDelegate.restartCamera()
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // AirPods status (only when AirPods mode selected)
-                                if trackingSource == .airpods {
-                                    SubtleDivider()
-
-                                    HStack {
-                                        Image(systemName: airPodsAvailable ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                                            .foregroundColor(airPodsAvailable ? .green : .orange)
-                                            .font(.system(size: 12))
-                                        Text(airPodsAvailable ? "AirPods connected" : "Connect compatible AirPods")
-                                            .font(.system(size: 12))
-                                            .foregroundColor(.secondary)
-                                    }
-                                }
-                            }
-                        }
-
-                        SectionCard("Warning", icon: "eye") {
-                            VStack(alignment: .leading, spacing: 10) {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    HStack(spacing: 4) {
-                                        Text("Style")
-                                            .font(.system(size: 12))
-
-                                        HelpButton(text: "How Posturr alerts you when slouching. Blur obscures the screen, Vignette shows a glow from the edges, Border shows colored borders, Solid fills the screen completely. None disables visual warnings.")
-                                    }
-
-                                    WarningStylePicker(selection: $warningMode)
-                                        .onChange(of: warningMode) { newValue in
-                                            if newValue != appDelegate.warningMode {
-                                                appDelegate.switchWarningMode(to: newValue)
-                                                appDelegate.saveSettings()
-                                            }
-                                        }
-                                }
-
-                                HStack {
-                                    Text("Color")
-                                        .font(.system(size: 12))
-                                    Spacer()
-                                    ColorPicker("", selection: $warningColor, supportsOpacity: false)
-                                        .labelsHidden()
-                                        .onChange(of: warningColor) { newValue in
-                                            let nsColor = NSColor(newValue)
-                                            appDelegate.updateWarningColor(nsColor)
-                                            appDelegate.saveSettings()
-                                        }
-                                }
-                            }
-                        }
-
-                        SectionCard("Sensitivity", icon: "slider.horizontal.3") {
-                            VStack(spacing: 10) {
-                                LabeledSlider(
-                                    title: "Dead Zone",
-                                    helpText: "How much you can move before warning starts. A relaxed dead zone allows more natural movement.",
-                                    value: $deadZoneSlider,
-                                    range: 0...4,
-                                    step: 1,
-                                    leftLabel: "Strict",
-                                    rightLabel: "Loose",
-                                    valueLabel: deadZoneLabels[Int(deadZoneSlider)]
-                                )
-                                .onChange(of: deadZoneSlider) { newValue in
-                                    let index = Int(newValue)
-                                    deadZone = deadZoneValues[index]
-                                    appDelegate.deadZone = deadZone
-                                    appDelegate.saveSettings()
-                                }
-
-                                SubtleDivider()
-
-                                LabeledSlider(
-                                    title: "Intensity",
-                                    helpText: "How quickly the warning increases as you slouch past the dead zone.",
-                                    value: $intensitySlider,
-                                    range: 0...4,
-                                    step: 1,
-                                    leftLabel: "Gentle",
-                                    rightLabel: "Aggressive",
-                                    valueLabel: intensityLabels[Int(intensitySlider)]
-                                )
-                                .onChange(of: intensitySlider) { newValue in
-                                    let index = Int(newValue)
-                                    intensity = intensityValues[index]
-                                    appDelegate.intensity = intensity
-                                    appDelegate.saveSettings()
-                                }
-
-                                SubtleDivider()
-
-                                LabeledSlider(
-                                    title: "Delay",
-                                    helpText: "Grace period before warning activates. Allows brief glances at keyboard without triggering.",
-                                    value: $warningOnsetDelay,
-                                    range: 0...30,
-                                    step: 1,
-                                    leftLabel: "0s",
-                                    rightLabel: "30s",
-                                    valueLabel: "\(Int(warningOnsetDelay))s"
-                                )
-                                .onChange(of: warningOnsetDelay) { newValue in
-                                    appDelegate.warningOnsetDelay = newValue
-                                    appDelegate.saveSettings()
-                                }
-                            }
-                        }
-
-                        SectionCard("Detection", icon: "gauge.with.dots.needle.33percent") {
-                            LabeledSlider(
-                                title: "Mode",
-                                helpText: "Balance between responsiveness and battery life. Responsive mode detects posture changes quickly. Performance mode uses less CPU and battery.",
-                                value: $detectionModeSlider,
-                                range: 0...2,
-                                step: 1,
-                                leftLabel: "Responsive",
-                                rightLabel: "Performance",
-                                valueLabel: detectionModes[Int(detectionModeSlider)].displayName
-                            )
-                            .onChange(of: detectionModeSlider) { newValue in
-                                let index = Int(newValue)
-                                appDelegate.detectionMode = detectionModes[index]
-                                appDelegate.saveSettings()
-                                appDelegate.applyDetectionMode()
-                            }
-                        }
+                // Social links
+                HStack(spacing: 4) {
+                    Link(destination: URL(string: "https://github.com/tldev/posturr")!) {
+                        GitHubIcon(color: Color.secondary.opacity(0.6))
+                            .frame(width: 14, height: 14)
+                            .padding(3)
+                            .contentShape(Rectangle())
                     }
-                    .frame(maxWidth: .infinity)
-
-                    // Right column - Behavior
-                    VStack(spacing: 8) {
-                        SectionCard("Behavior", icon: "gearshape") {
-                            VStack(spacing: 10) {
-                                SettingRow(
-                                    title: "Launch at login",
-                                    helpText: "Automatically start Posturr when you log in to your Mac",
-                                    isOn: $launchAtLogin
-                                )
-                                .onChange(of: launchAtLogin) { newValue in
-                                    do {
-                                        if newValue {
-                                            try SMAppService.mainApp.register()
-                                        } else {
-                                            try SMAppService.mainApp.unregister()
-                                        }
-                                    } catch {
-                                        launchAtLogin = SMAppService.mainApp.status == .enabled
-                                    }
-                                }
-
-                                SubtleDivider()
-
-                                SettingRow(
-                                    title: "Show in dock",
-                                    helpText: "Keep Posturr visible in the Dock and Cmd+Tab switcher",
-                                    isOn: $showInDock
-                                )
-                                .onChange(of: showInDock) { newValue in
-                                    appDelegate.showInDock = newValue
-                                    appDelegate.saveSettings()
-                                    NSApp.setActivationPolicy(newValue ? .regular : .accessory)
-                                    DispatchQueue.main.async {
-                                        appDelegate.settingsWindowController.window?.makeKeyAndOrderFront(nil)
-                                        NSApp.activate(ignoringOtherApps: true)
-                                    }
-                                }
-
-                                SubtleDivider()
-
-                                SettingRow(
-                                    title: "Blur when away",
-                                    helpText: "Apply full blur when you step away from the screen",
-                                    isOn: $blurWhenAway
-                                )
-                                .onChange(of: blurWhenAway) { newValue in
-                                    appDelegate.blurWhenAway = newValue
-                                    appDelegate.saveSettings()
-                                }
-
-                                SubtleDivider()
-
-                                SettingRow(
-                                    title: "Pause on the go",
-                                    helpText: "Auto-pause when laptop display becomes the only screen",
-                                    isOn: $pauseOnTheGo
-                                )
-                                .onChange(of: pauseOnTheGo) { newValue in
-                                    appDelegate.pauseOnTheGo = newValue
-                                    appDelegate.saveSettings()
-                                    if !newValue && appDelegate.state == .paused(.onTheGo) {
-                                        appDelegate.state = .monitoring
-                                    }
-                                }
-
-                                SubtleDivider()
-
-                                ShortcutRecorderView(
-                                    shortcut: $toggleShortcut,
-                                    isEnabled: $toggleShortcutEnabled,
-                                    onShortcutChange: {
-                                        appDelegate.toggleShortcutEnabled = toggleShortcutEnabled
-                                        appDelegate.toggleShortcut = toggleShortcut
-                                        appDelegate.saveSettings()
-                                        appDelegate.updateGlobalKeyMonitor()
-                                    }
-                                )
-                            }
-                        }
-
-                        #if !APP_STORE
-                        SectionCard("Advanced", icon: "wrench.and.screwdriver") {
-                            SettingRow(
-                                title: "Compatibility mode",
-                                helpText: "Enable if blur isn't appearing. Uses alternative rendering method.",
-                                isOn: $useCompatibilityMode
-                            )
-                            .onChange(of: useCompatibilityMode) { newValue in
-                                appDelegate.useCompatibilityMode = newValue
-                                appDelegate.saveSettings()
-                                appDelegate.currentBlurRadius = 0
-                                for blurView in appDelegate.blurViews {
-                                    blurView.alphaValue = 0
-                                }
-                            }
-                        }
-                        #endif
-
-                        // Recalibrate action
-                        Button(action: {
-                            appDelegate.startCalibration()
-                        }) {
-                            HStack {
-                                Image(systemName: "arrow.triangle.2.circlepath")
-                                    .font(.system(size: 11, weight: .medium))
-                                Text("Recalibrate Posture")
-                                    .font(.system(size: 12, weight: .medium))
-                            }
-                            .foregroundColor(.brandCyan)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .fill(Color.brandCyan.opacity(0.1))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .stroke(Color.brandCyan.opacity(0.3), lineWidth: 1)
-                            )
-                        }
-                        .buttonStyle(.plain)
+                    .buttonStyle(.plain)
+                    .onHover { hovering in
+                        if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
                     }
-                    .frame(maxWidth: .infinity, alignment: .top)
+                    .help("View on GitHub")
+
+                    Link(destination: URL(string: "https://discord.gg/6Ufy2SnXDW")!) {
+                        DiscordIcon(color: Color.secondary.opacity(0.6))
+                            .frame(width: 14, height: 14)
+                            .padding(3)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { hovering in
+                        if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+                    }
+                    .help("Join Discord")
                 }
 
+                if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+                    Text("v\(version)")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.primary.opacity(0.05)))
+                }
             }
-        .padding(18)
-        .frame(width: 640)
+            .padding(.bottom, 10)
+
+            SubtleDivider()
+
+            // Tracking & Warning Section
+            VStack(spacing: 6) {
+                // Tracking row
+                HStack(spacing: 8) {
+                    Text("Tracking")
+                        .font(.system(size: 11, weight: .medium))
+                        .frame(width: 58, alignment: .leading)
+
+                    CompactTrackingSourcePicker(
+                        selection: $trackingSource,
+                        airPodsAvailable: airPodsAvailable
+                    )
+                    .frame(width: 130)
+                    .onChange(of: trackingSource) { newValue in
+                        if newValue != appDelegate.trackingSource {
+                            appDelegate.switchTrackingSource(to: newValue)
+                        }
+                    }
+
+                    if trackingSource == .camera {
+                        if availableCameras.isEmpty {
+                            Text("No cameras")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                        } else {
+                            Picker("", selection: $selectedCameraID) {
+                                ForEach(availableCameras, id: \.id) { camera in
+                                    Text(camera.name).tag(camera.id)
+                                }
+                            }
+                            .labelsHidden()
+                            .frame(maxWidth: .infinity)
+                            .onChange(of: selectedCameraID) { newValue in
+                                if newValue != appDelegate.selectedCameraID {
+                                    appDelegate.selectedCameraID = newValue
+                                    appDelegate.saveSettings()
+                                    appDelegate.restartCamera()
+                                }
+                            }
+                        }
+                    } else {
+                        // AirPods status
+                        HStack(spacing: 4) {
+                            Image(systemName: airPodsAvailable ? "checkmark.circle.fill" : "exclamationmark.circle")
+                                .foregroundColor(airPodsAvailable ? .green : .secondary)
+                                .font(.system(size: 10))
+                            Text(airPodsAvailable ? "Connected" : "Not connected")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                    }
+
+                    // Recalibrate button
+                    Button(action: { appDelegate.startCalibration() }) {
+                        HStack(spacing: 3) {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.system(size: 9, weight: .medium))
+                            Text("Recalibrate")
+                                .font(.system(size: 10, weight: .medium))
+                        }
+                        .foregroundColor(.brandCyan)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(Color.brandCyan.opacity(0.1))
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+                .frame(height: 26)
+
+                // Warning row
+                HStack(spacing: 8) {
+                    HStack(spacing: 3) {
+                        Text("Warning")
+                            .font(.system(size: 11, weight: .medium))
+                        HelpButton(text: "Blur obscures the screen, Vignette shows edge glow, Border shows colored borders, Solid fills screen. None disables visual warnings.")
+                    }
+                    .frame(width: 72, alignment: .leading)
+
+                    CompactWarningStylePicker(selection: $warningMode)
+                        .frame(maxWidth: .infinity)
+                        .onChange(of: warningMode) { newValue in
+                            if newValue != appDelegate.warningMode {
+                                appDelegate.switchWarningMode(to: newValue)
+                                appDelegate.saveSettings()
+                            }
+                        }
+
+                    ColorPicker("", selection: $warningColor, supportsOpacity: false)
+                        .labelsHidden()
+                        .scaleEffect(0.8)
+                        .frame(width: 28, height: 22)
+                        .onChange(of: warningColor) { newValue in
+                            let nsColor = NSColor(newValue)
+                            appDelegate.updateWarningColor(nsColor)
+                            appDelegate.saveSettings()
+                        }
+                }
+                .frame(height: 26)
+            }
+            .padding(.vertical, 10)
+
+            SubtleDivider()
+
+            // Sensitivity Section
+            VStack(spacing: 4) {
+                CompactSlider(
+                    title: "Dead Zone",
+                    helpText: "How much you can move before warning starts. A relaxed dead zone allows more natural movement.",
+                    value: $deadZoneSlider,
+                    range: 0...4,
+                    step: 1,
+                    valueLabel: deadZoneLabels[Int(deadZoneSlider)]
+                )
+                .onChange(of: deadZoneSlider) { newValue in
+                    let index = Int(newValue)
+                    deadZone = deadZoneValues[index]
+                    appDelegate.deadZone = deadZone
+                    appDelegate.saveSettings()
+                }
+
+                CompactSlider(
+                    title: "Intensity",
+                    helpText: "How quickly the warning increases as you slouch past the dead zone.",
+                    value: $intensitySlider,
+                    range: 0...4,
+                    step: 1,
+                    valueLabel: intensityLabels[Int(intensitySlider)]
+                )
+                .onChange(of: intensitySlider) { newValue in
+                    let index = Int(newValue)
+                    intensity = intensityValues[index]
+                    appDelegate.intensity = intensity
+                    appDelegate.saveSettings()
+                }
+
+                CompactSlider(
+                    title: "Delay",
+                    helpText: "Grace period before warning activates. Allows brief glances at keyboard without triggering.",
+                    value: $warningOnsetDelay,
+                    range: 0...30,
+                    step: 1,
+                    valueLabel: "\(Int(warningOnsetDelay))s"
+                )
+                .onChange(of: warningOnsetDelay) { newValue in
+                    appDelegate.warningOnsetDelay = newValue
+                    appDelegate.saveSettings()
+                }
+
+                CompactSlider(
+                    title: "Detection",
+                    helpText: "Balance responsiveness vs battery. Responsive detects quickly, Performance saves battery.",
+                    value: $detectionModeSlider,
+                    range: 0...2,
+                    step: 1,
+                    valueLabel: detectionModes[Int(detectionModeSlider)].displayName
+                )
+                .onChange(of: detectionModeSlider) { newValue in
+                    let index = Int(newValue)
+                    appDelegate.detectionMode = detectionModes[index]
+                    appDelegate.saveSettings()
+                    appDelegate.applyDetectionMode()
+                }
+            }
+            .padding(.vertical, 10)
+
+            SubtleDivider()
+
+            // Behavior Section - 2 column grid with fixed widths
+            VStack(spacing: 6) {
+                HStack(spacing: 0) {
+                    CompactToggle(
+                        title: "Launch at login",
+                        helpText: "Automatically start Posturr when you log in",
+                        isOn: $launchAtLogin
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onChange(of: launchAtLogin) { newValue in
+                        do {
+                            if newValue {
+                                try SMAppService.mainApp.register()
+                            } else {
+                                try SMAppService.mainApp.unregister()
+                            }
+                        } catch {
+                            launchAtLogin = SMAppService.mainApp.status == .enabled
+                        }
+                    }
+
+                    CompactToggle(
+                        title: "Show in dock",
+                        helpText: "Keep Posturr in Dock and Cmd+Tab",
+                        isOn: $showInDock
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onChange(of: showInDock) { newValue in
+                        appDelegate.showInDock = newValue
+                        appDelegate.saveSettings()
+                        NSApp.setActivationPolicy(newValue ? .regular : .accessory)
+                        DispatchQueue.main.async {
+                            appDelegate.settingsWindowController.window?.makeKeyAndOrderFront(nil)
+                            NSApp.activate(ignoringOtherApps: true)
+                        }
+                    }
+                }
+
+                HStack(spacing: 0) {
+                    CompactToggle(
+                        title: "Blur when away",
+                        helpText: "Apply full blur when you step away",
+                        isOn: $blurWhenAway
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onChange(of: blurWhenAway) { newValue in
+                        appDelegate.blurWhenAway = newValue
+                        appDelegate.saveSettings()
+                    }
+
+                    CompactToggle(
+                        title: "Pause on the go",
+                        helpText: "Auto-pause on laptop-only display",
+                        isOn: $pauseOnTheGo
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onChange(of: pauseOnTheGo) { newValue in
+                        appDelegate.pauseOnTheGo = newValue
+                        appDelegate.saveSettings()
+                        if !newValue && appDelegate.state == .paused(.onTheGo) {
+                            appDelegate.state = .monitoring
+                        }
+                    }
+                }
+
+                // Shortcut row
+                HStack(spacing: 0) {
+                    CompactShortcutRecorder(
+                        shortcut: $toggleShortcut,
+                        isEnabled: $toggleShortcutEnabled,
+                        onShortcutChange: {
+                            appDelegate.toggleShortcutEnabled = toggleShortcutEnabled
+                            appDelegate.toggleShortcut = toggleShortcut
+                            appDelegate.saveSettings()
+                            appDelegate.updateGlobalKeyMonitor()
+                        }
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    #if !APP_STORE
+                    CompactToggle(
+                        title: "Compatibility mode",
+                        helpText: "Enable if blur isn't appearing",
+                        isOn: $useCompatibilityMode
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onChange(of: useCompatibilityMode) { newValue in
+                        appDelegate.useCompatibilityMode = newValue
+                        appDelegate.saveSettings()
+                        appDelegate.currentBlurRadius = 0
+                        for blurView in appDelegate.blurViews {
+                            blurView.alphaValue = 0
+                        }
+                    }
+                    #else
+                    Spacer()
+                        .frame(maxWidth: .infinity)
+                    #endif
+                }
+            }
+            .padding(.vertical, 10)
+        }
+        .padding(16)
+        .frame(width: 480)
         .fixedSize(horizontal: false, vertical: true)
     }
 }
@@ -913,22 +822,22 @@ struct HelpButton: View {
     var body: some View {
         Button(action: { showingHelp.toggle() }) {
             Image(systemName: "questionmark.circle")
-                .font(.system(size: 11))
-                .foregroundColor(.secondary.opacity(0.6))
+                .font(.system(size: 10))
+                .foregroundColor(.secondary.opacity(0.5))
         }
         .buttonStyle(.plain)
         .popover(isPresented: $showingHelp, arrowEdge: .trailing) {
             Text(text)
-                .font(.system(size: 12))
-                .padding(12)
-                .frame(width: 220)
+                .font(.system(size: 11))
+                .padding(10)
+                .frame(width: 200)
         }
     }
 }
 
-// MARK: - Shortcut Recorder View
+// MARK: - Compact Shortcut Recorder
 
-struct ShortcutRecorderView: View {
+struct CompactShortcutRecorder: View {
     @Binding var shortcut: KeyboardShortcut
     @Binding var isEnabled: Bool
     var onShortcutChange: () -> Void
@@ -937,21 +846,21 @@ struct ShortcutRecorderView: View {
     @State private var localMonitor: Any?
 
     var body: some View {
-        HStack {
-            Text("Shortcut")
-                .font(.system(size: 12))
-
-            HelpButton(text: "Global keyboard shortcut to quickly enable or disable Posturr from anywhere. Click the shortcut field and press your desired key combination.")
-
-            Spacer()
-
+        HStack(spacing: 6) {
             Toggle("", isOn: $isEnabled)
                 .toggleStyle(.switch)
                 .tint(.brandCyan)
                 .labelsHidden()
+                .scaleEffect(0.65)
+                .frame(width: 32)
                 .onChange(of: isEnabled) { _ in
                     onShortcutChange()
                 }
+
+            Text("Shortcut")
+                .font(.system(size: 11))
+
+            HelpButton(text: "Global keyboard shortcut to toggle Posturr. Click the field and press your desired key combination.")
 
             Button(action: {
                 isRecording.toggle()
@@ -961,19 +870,19 @@ struct ShortcutRecorderView: View {
                     stopRecording()
                 }
             }) {
-                Text(isRecording ? "Press keys..." : shortcut.displayString)
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                Text(isRecording ? "Press..." : shortcut.displayString)
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundColor(isRecording ? .secondary : (isEnabled ? .primary : .secondary))
                     .lineLimit(1)
-                    .frame(minWidth: 90)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
+                    .frame(width: 60)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
                     .background(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
                             .fill(isRecording ? Color.brandCyan.opacity(0.15) : Color.primary.opacity(0.06))
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
                             .stroke(isRecording ? Color.brandCyan : Color.primary.opacity(0.1), lineWidth: 1)
                     )
             }
@@ -981,6 +890,7 @@ struct ShortcutRecorderView: View {
             .disabled(!isEnabled)
             .opacity(isEnabled ? 1.0 : 0.5)
         }
+        .frame(height: 22)
         .onDisappear {
             stopRecording()
         }
@@ -988,13 +898,11 @@ struct ShortcutRecorderView: View {
 
     private func startRecording() {
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            // Ignore modifier-only keys
-            let modifierKeyCodes: Set<UInt16> = [54, 55, 56, 57, 58, 59, 60, 61, 62, 63]  // Cmd, Shift, Ctrl, Option, Fn, etc.
+            let modifierKeyCodes: Set<UInt16> = [54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
             if modifierKeyCodes.contains(event.keyCode) {
                 return event
             }
 
-            // Require at least one modifier
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             let hasModifier = modifiers.contains(.command) || modifiers.contains(.control) ||
                              modifiers.contains(.option) || modifiers.contains(.shift)
@@ -1003,7 +911,7 @@ struct ShortcutRecorderView: View {
                 shortcut = KeyboardShortcut(keyCode: event.keyCode, modifiers: modifiers)
                 stopRecording()
                 onShortcutChange()
-                return nil  // Consume the event
+                return nil
             }
 
             return event
