@@ -6,16 +6,17 @@
 
 When the user says "ship it", perform the complete release workflow:
 
-1. **Bump version** in `build.sh`
-2. **Commit** cleanup/feature changes with proper attribution
-3. **Merge** to main (if on a feature branch)
-4. **Run `./release.sh X.Y.Z`** - builds, signs, notarizes, creates GitHub release
-5. **Update release notes** with user-friendly description via `gh release edit`
-6. **Update CHANGELOG.md** with new version entry
-7. **Update README.md** contributors section if applicable
-8. **Commit and push** changelog/readme updates
-9. **Comment on PR/issue** thanking contributor and linking to release
-10. **Update Homebrew tap**:
+1. **Pull latest changes** with `git pull --rebase origin main` - ALWAYS do this first before committing
+2. **Bump version** in `build.sh`
+3. **Commit** cleanup/feature changes with proper attribution
+4. **Merge** to main (if on a feature branch)
+5. **Run `./release.sh X.Y.Z`** - builds, signs, notarizes, creates GitHub release
+6. **Update release notes** with user-friendly description via `gh release edit`
+7. **Update CHANGELOG.md** with new version entry
+8. **Update README.md** contributors section if applicable
+9. **Commit and push** changelog/readme updates
+10. **Comment on PR/issue** thanking contributor and linking to release
+11. **Update Homebrew tap**:
     ```bash
     # Get SHA256
     gh release view vX.Y.Z --repo tldev/posturr --json assets --jq '.assets[] | select(.name | endswith(".zip")) | .url' | xargs curl -sL | shasum -a 256 | cut -d' ' -f1
