@@ -9,9 +9,6 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     func showSettings(appDelegate: AppDelegate, fromStatusItem statusItem: NSStatusItem?) {
         self.appDelegate = appDelegate
 
-        // Find the screen where the status item is located
-        let targetScreen = statusItem?.button?.window?.screen ?? NSScreen.main ?? NSScreen.screens.first
-
         if let existingWindow = window {
             // Show existing window where user left it (position is auto-saved)
             existingWindow.makeKeyAndOrderFront(nil)
@@ -39,21 +36,19 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         window.titlebarAppearsTransparent = false
         window.backgroundColor = NSColor.windowBackgroundColor
 
-        // Restore saved window position, or center on status item's screen if no saved position
-        window.setFrameAutosaveName("SettingsWindow")
-        if !window.setFrameUsingName("SettingsWindow") {
-            // No saved position - center on target screen
-            if let screen = targetScreen {
-                centerWindow(window, on: screen)
-            } else {
-                window.center()
-            }
+        // Restore saved position or center on screen
+        let restored = window.setFrameUsingName("SettingsWindow")
+        if !restored || !self.isWindowOnScreen(window) {
+            window.center()
         }
 
         self.window = window
         NSApp.setActivationPolicy(.regular)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+
+        // Register autosave after positioning to prevent interference
+        window.setFrameAutosaveName("SettingsWindow")
     }
 
     func windowWillClose(_ notification: Notification) {
@@ -63,12 +58,13 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    private func centerWindow(_ window: NSWindow, on screen: NSScreen) {
-        let screenFrame = screen.frame
-        let windowSize = window.frame.size
-        let x = screenFrame.origin.x + (screenFrame.width - windowSize.width) / 2
-        let y = screenFrame.origin.y + (screenFrame.height - windowSize.height) / 2
-        window.setFrameOrigin(NSPoint(x: x, y: y))
+    private func isWindowOnScreen(_ window: NSWindow) -> Bool {
+        for screen in NSScreen.screens {
+            if screen.visibleFrame.intersects(window.frame) {
+                return true
+            }
+        }
+        return false
     }
 
     func close() {

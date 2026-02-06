@@ -14,6 +14,7 @@ set -e
 APP_NAME="Posturr"
 BUNDLE_ID="com.thelazydeveloper.posturr"
 VERSION="1.8.1"
+BUILD_NUMBER="4"
 MIN_MACOS="13.0"
 
 # Check for App Store build flag
@@ -121,7 +122,7 @@ cat > "$CONTENTS/Info.plist" << EOF
     <key>CFBundleDisplayName</key>
     <string>$APP_NAME</string>
     <key>CFBundleVersion</key>
-    <string>$VERSION</string>
+    <string>$BUILD_NUMBER</string>
     <key>CFBundleShortVersionString</key>
     <string>$VERSION</string>
     <key>CFBundlePackageType</key>
@@ -185,6 +186,20 @@ if [ -d "$SOURCES_DIR/Resources" ]; then
     done
 fi
 
+# Embed provisioning profile for App Store builds
+if [ "$APP_STORE_BUILD" = true ]; then
+    PROFILE_PATH="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/ee9bedd9-b6fa-4db7-b698-21a632a945e9.provisionprofile"
+    if [ -f "$PROFILE_PATH" ]; then
+        echo "Embedding provisioning profile..."
+        cp "$PROFILE_PATH" "$CONTENTS/embedded.provisionprofile"
+    else
+        echo -e "${RED}Error: App Store provisioning profile not found at:${NC}"
+        echo "  $PROFILE_PATH"
+        echo "Download it from the Apple Developer portal."
+        exit 1
+    fi
+fi
+
 # Create entitlements file
 echo "Creating entitlements..."
 if [ "$APP_STORE_BUILD" = true ]; then
@@ -198,6 +213,12 @@ if [ "$APP_STORE_BUILD" = true ]; then
     <true/>
     <key>com.apple.security.device.camera</key>
     <true/>
+    <key>com.apple.security.device.bluetooth</key>
+    <true/>
+    <key>com.apple.application-identifier</key>
+    <string>KBF2YGT2KP.$BUNDLE_ID</string>
+    <key>com.apple.developer.team-identifier</key>
+    <string>KBF2YGT2KP</string>
 </dict>
 </plist>
 EOF
