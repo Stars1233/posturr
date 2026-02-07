@@ -215,18 +215,18 @@ class AnalyticsManager: ObservableObject {
 
     func injectMarketingData() {
         let now = now()
-        let dataPoints: [(daysAgo: Int, score: Double, slouchCount: Int)] = [
-            (6, 72, 18),
-            (5, 76, 15),
-            (4, 81, 12),
-            (3, 85, 9),
-            (2, 89, 6),
-            (1, 93, 4),
-            (0, 96, 2),
+        let dataPoints: [(daysAgo: Int, score: Double, slouchCount: Int, hours: Double)] = [
+            (6, 68, 22, 4.5),
+            (5, 74, 16, 5.2),
+            (4, 71, 19, 6.1),  // dip — natural regression
+            (3, 82, 11, 5.8),
+            (2, 79, 13, 4.9),  // slight pullback
+            (1, 88,  7, 6.3),
+            (0, 91,  5, 3.2),  // today — partial day
         ]
         for point in dataPoints {
             guard let date = calendar.date(byAdding: .day, value: -point.daysAgo, to: now) else { continue }
-            let totalSeconds: TimeInterval = 21600 // 6 hours
+            let totalSeconds: TimeInterval = point.hours * 3600
             let slouchSeconds = totalSeconds * (1.0 - point.score / 100.0)
             let key = DailyStats.dayKey(for: date, calendar: calendar)
             let stats = DailyStats(date: date, totalSeconds: totalSeconds, slouchSeconds: slouchSeconds, slouchCount: point.slouchCount)
